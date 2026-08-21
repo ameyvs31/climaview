@@ -21,13 +21,37 @@ export default function App() {
     loadByCoordinates,
   } = useWeather();
 
-  const [lastSearch, setLastSearch] = useState(getLastCity());
+  const [lastSearch, setLastSearch] = useState(() => {
+    const city = getLastCity();
 
+    return typeof city === "string" && city.trim()
+      ? city.trim()
+      : "Rajnandgaon";
+  });
+
+  // Load initial city only once
   useEffect(() => {
-    loadWeather(lastSearch);
-  }, [loadWeather, lastSearch]);
+    const city = getLastCity();
 
-  const handleSearch = (city) => {
+    if (typeof city === "string" && city.trim()) {
+      loadWeather(city.trim());
+    } else {
+      loadWeather("Rajnandgaon");
+    }
+  }, []);
+
+  // Search city
+  const handleSearch = (value) => {
+    // Support both a string and an input event
+    const city =
+      typeof value === "string"
+        ? value
+        : value?.target?.value;
+
+    if (typeof city !== "string") {
+      return;
+    }
+
     const cleanCity = city.trim();
 
     if (!cleanCity) {
@@ -38,33 +62,45 @@ export default function App() {
     loadWeather(cleanCity);
   };
 
+  // Use current location
   const handleLocate = () => {
     if (!navigator.geolocation) {
-      loadWeather(lastSearch);
+      loadWeather(lastSearch || "Rajnandgaon");
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        loadByCoordinates(coords.latitude, coords.longitude);
+        loadByCoordinates(
+          coords.latitude,
+          coords.longitude
+        );
       },
       () => {
-        loadWeather(lastSearch);
+        loadWeather(lastSearch || "Rajnandgaon");
       },
       {
         enableHighAccuracy: true,
         timeout: 8000,
+        maximumAge: 0,
       }
     );
   };
 
+  // Retry
   const handleRetry = () => {
-    loadWeather(lastSearch);
+    const city =
+      typeof lastSearch === "string" && lastSearch.trim()
+        ? lastSearch.trim()
+        : "Rajnandgaon";
+
+    loadWeather(city);
   };
 
   return (
     <div className="app-shell">
-      {/* Header */}
+      {/* ================= HEADER ================= */}
+
       <header className="site-header">
         <a
           className="brand"
@@ -94,32 +130,39 @@ export default function App() {
           </a>
 
           <a
-            href="https://github.com/ameyvs31"
+            href="https://github.com/ameyvs31/climaview"
             target="_blank"
             rel="noreferrer"
-            aria-label="GitHub profile"
+            aria-label="ClimaView GitHub repository"
           >
             <Github size={18} />
           </a>
         </nav>
       </header>
 
-      {/* Main content */}
+      {/* ================= MAIN ================= */}
+
       <main
         id="dashboard"
         className="container"
       >
-        {/* Introduction */}
+        {/* ================= INTRO ================= */}
+
         <section className="intro">
           <div>
-          <span className="eyebrow">WEATHER INTELLIGENCE</span>
+            <span className="eyebrow">
+              WEATHER INTELLIGENCE
+            </span>
 
-<h1>Weather intelligence, at a glance.</h1>
+            <h1>
+              Weather intelligence, at a glance.
+            </h1>
 
-<p>
-  Real-time conditions, hourly trends, and multi-day forecasts
-  in a focused weather dashboard.
-</p>
+            <p>
+              Real-time conditions, hourly trends, and
+              multi-day forecasts in a focused weather
+              dashboard.
+            </p>
           </div>
 
           <div className="data-source">
@@ -128,19 +171,22 @@ export default function App() {
           </div>
         </section>
 
-        {/* Search */}
+        {/* ================= SEARCH ================= */}
+
         <SearchBar
           onSearch={handleSearch}
           onLocate={handleLocate}
           loading={loading}
         />
 
-        {/* Loading state */}
+        {/* ================= LOADING ================= */}
+
         {loading && !weather && (
           <Skeleton />
         )}
 
-        {/* Error state */}
+        {/* ================= ERROR ================= */}
+
         {error && !loading && (
           <ErrorState
             message={error}
@@ -148,57 +194,65 @@ export default function App() {
           />
         )}
 
-        {/* Weather dashboard */}
-        {weather &&
-          forecast &&
-          !loading && (
-            <>
-              {/* Current weather */}
-              <CurrentWeather
-                weather={weather}
+        {/* ================= WEATHER ================= */}
+
+        {weather && forecast && !loading && (
+          <>
+            <CurrentWeather
+              weather={weather}
+            />
+
+            {/* ================= FORECAST ================= */}
+
+            <div
+              id="forecast"
+              className="forecast-layout"
+            >
+              <HourlyForecast
+                forecast={forecast}
               />
 
-              {/* Forecast sections */}
-              <div
-                id="forecast"
-                className="forecast-layout"
-              >
-                <HourlyForecast
-                  forecast={forecast}
-                />
+              <DailyForecast
+                forecast={forecast}
+              />
+            </div>
 
-                <DailyForecast
-                  forecast={forecast}
-                />
+            {/* ================= LOCATION ================= */}
+
+            <section className="location-strip panel">
+              <div className="location-icon">
+                <MapPin size={18} />
               </div>
 
-              {/* Location information */}
-              <section className="location-strip panel">
-                <div className="location-icon">
-                  <MapPin size={18} />
-                </div>
+              <div>
+                <strong>
+                  {weather.name}
+                  {weather.sys?.country
+                    ? `, ${weather.sys.country}`
+                    : ""}
+                </strong>
 
-                <div>
-                  <strong>
-                    {weather.name},{" "}
-                    {weather.sys.country}
-                  </strong>
-
-                  <span>
-                    Coordinates{" "}
-                    {weather.coord.lat.toFixed(2)},{" "}
-                    {weather.coord.lon.toFixed(2)}
-                  </span>
-                </div>
-
-                <span className="updated">
-                  Updated just now
+                <span>
+                  Coordinates{" "}
+                  {typeof weather.coord?.lat === "number"
+                    ? weather.coord.lat.toFixed(2)
+                    : "--"}
+                  ,{" "}
+                  {typeof weather.coord?.lon === "number"
+                    ? weather.coord.lon.toFixed(2)
+                    : "--"}
                 </span>
-              </section>
-            </>
-          )}
+              </div>
 
-        {/* Footer */}
+              <span className="updated">
+                Updated just now
+              </span>
+            </section>
+          </>
+        )}
+
+        {/* ================= FOOTER ================= */}
+
         <Footer />
       </main>
     </div>

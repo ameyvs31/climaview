@@ -1,45 +1,86 @@
-import React from "react";
-import { Search, MapPin, Crosshair } from "lucide-react";
+import React, { useState } from "react";
+import { Search, LocateFixed } from "lucide-react";
 
-function SearchBar({ city, setCity, onSearch, onLocation, loading }) {
+function SearchBar({
+  onSearch,
+  onLocation,
+  loading = false,
+}) {
+  const [city, setCity] = useState("");
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (city.trim()) onSearch();
+
+    const trimmedCity =
+      typeof city === "string"
+        ? city.trim()
+        : "";
+
+    if (!trimmedCity) {
+      return;
+    }
+
+    if (typeof onSearch === "function") {
+      onSearch(trimmedCity);
+    }
+  };
+
+  const handleChange = (e) => {
+    setCity(e.target.value || "");
+  };
+
+  const handleLocation = () => {
+    if (typeof onLocation === "function") {
+      onLocation();
+    }
   };
 
   return (
-    <form className="search-wrapper" onSubmit={handleSubmit}>
-      <div className="search-bar">
-        <Search className="search-icon" size={20} />
+    <div className="search-wrapper">
+
+      <form
+        className="search-bar"
+        onSubmit={handleSubmit}
+      >
+        <Search size={20} />
 
         <input
           type="text"
           value={city}
-          onChange={(e) => setCity(e.target.value)}
+          onChange={handleChange}
           placeholder="Search for a city..."
+          disabled={loading}
           aria-label="Search for a city"
         />
 
         <button
           type="submit"
           className="search-button"
-          disabled={loading}
+          disabled={
+            loading ||
+            !city.trim()
+          }
         >
           <Search size={16} />
-          <span>{loading ? "Searching..." : "Search"}</span>
+          Search
         </button>
-      </div>
+      </form>
 
       <button
         type="button"
         className="location-button"
-        onClick={onLocation}
+        onClick={handleLocation}
         disabled={loading}
+        aria-label="Use my location"
       >
-        <Crosshair size={18} />
-        <span>Use my location</span>
+        <LocateFixed size={18} />
+
+        <span>
+          Use my location
+        </span>
       </button>
-    </form>
+
+    </div>
   );
 }
 
